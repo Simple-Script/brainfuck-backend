@@ -2,42 +2,39 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Loading...</title>
+<title>Brainfuck Loader</title>
 </head>
 
 <body>
+Loading Brainfuck site...
+
 <script>
-// ===== CHANGE THIS TO YOUR FILE =====
 const BF_URL = "https://raw.githubusercontent.com/Simple-Script/brainfuck-backend/refs/heads/main/tst.bf";
-// ===================================
 
-
-// Brainfuck interpreter
 function runBrainfuck(code, input="") {
     const tape = new Uint8Array(30000);
-    let ptr = 0, ip = 0, inputPtr = 0, output = "";
+    let ptr=0, ip=0, inputPtr=0, output="";
 
-    const stack = [], jumps = {};
+    const stack=[], jumps={};
 
-    for (let i = 0; i < code.length; i++) {
-        if (code[i] === "[") stack.push(i);
-        if (code[i] === "]") {
-            const j = stack.pop();
-            jumps[i] = j;
-            jumps[j] = i;
+    for (let i=0;i<code.length;i++){
+        if(code[i]=="[") stack.push(i);
+        if(code[i]=="]"){
+            const j=stack.pop();
+            jumps[i]=j; jumps[j]=i;
         }
     }
 
-    while (ip < code.length) {
-        switch (code[ip]) {
+    while(ip<code.length){
+        switch(code[ip]){
             case ">": ptr++; break;
             case "<": ptr--; break;
             case "+": tape[ptr]++; break;
             case "-": tape[ptr]--; break;
-            case ".": output += String.fromCharCode(tape[ptr]); break;
-            case ",": tape[ptr] = inputPtr < input.length ? input.charCodeAt(inputPtr++) : 0; break;
-            case "[": if (!tape[ptr]) ip = jumps[ip]; break;
-            case "]": if (tape[ptr]) ip = jumps[ip]; break;
+            case ".": output+=String.fromCharCode(tape[ptr]); break;
+            case ",": tape[ptr]=inputPtr<input.length?input.charCodeAt(inputPtr++):0; break;
+            case "[": if(!tape[ptr]) ip=jumps[ip]; break;
+            case "]": if(tape[ptr]) ip=jumps[ip]; break;
         }
         ip++;
     }
@@ -45,24 +42,26 @@ function runBrainfuck(code, input="") {
     return output;
 }
 
-
-// Auto-load on page start
 (async () => {
     try {
         const res = await fetch(BF_URL);
+
+        if (!res.ok) throw new Error("HTTP " + res.status);
+
         const code = await res.text();
 
         const html = runBrainfuck(code);
 
-        // Replace entire document with Brainfuck output
         document.open();
         document.write(html);
         document.close();
 
     } catch (e) {
-        document.body.textContent = "Failed to load Brainfuck file: " + e;
+        document.body.textContent = "Load failed: " + e.message +
+            "\n\nTip: run via http://localhost (python -m http.server)";
     }
 })();
 </script>
+
 </body>
 </html>
