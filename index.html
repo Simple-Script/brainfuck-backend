@@ -1,93 +1,30 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8" />
-<title>Brainfuck Web Loader</title>
-
-<style>
-body {
-    font-family: monospace;
-    background:#111;
-    color:#eee;
-    padding:20px;
-}
-
-textarea, input {
-    width:100%;
-    margin-bottom:10px;
-    background:#1b1b1b;
-    color:#00ff88;
-    border:1px solid #333;
-    padding:8px;
-}
-
-#preview {
-    margin-top:20px;
-    padding:15px;
-    background:#fff;
-    color:#000;
-    border-radius:6px;
-}
-
-button {
-    padding:8px 14px;
-}
-</style>
+<meta charset="UTF-8">
+<title>Loading...</title>
 </head>
 
 <body>
-
-<h2>Brainfuck → HTML Loader</h2>
-
-<label>Brainfuck file URL:</label>
-<input id="url" value="https://raw.githubusercontent.com/Simple-Script/brainfuck-backend/refs/heads/main/tst.bf" />
-
-<label>Program Input (optional):</label>
-<textarea id="stdin"></textarea>
-
-<button onclick="loadAndRun()">Load + Run</button>
-
-<h3>Rendered Output (HTML from Brainfuck):</h3>
-<div id="preview"></div>
-
 <script>
-async function loadAndRun() {
-    const url = document.getElementById("url").value;
-    const input = document.getElementById("stdin").value;
-
-    try {
-        const response = await fetch(url);
-        const code = await response.text();
-
-        const result = runBrainfuck(code, input);
-
-        // render as HTML
-        document.getElementById("preview").innerHTML = result;
-
-    } catch (err) {
-        document.getElementById("preview").textContent =
-            "Error loading file: " + err;
-    }
-}
+// ===== CHANGE THIS TO YOUR FILE =====
+const BF_URL = "https://raw.githubusercontent.com/user/repo/main/page.bf";
+// ===================================
 
 
-function runBrainfuck(code, input) {
+// Brainfuck interpreter
+function runBrainfuck(code, input="") {
+    const tape = new Uint8Array(30000);
+    let ptr = 0, ip = 0, inputPtr = 0, output = "";
 
-    let tape = new Uint8Array(30000);
-    let ptr = 0;
-    let ip = 0;
-    let inputPtr = 0;
-    let output = "";
-
-    const stack = [];
-    const jumps = {};
+    const stack = [], jumps = {};
 
     for (let i = 0; i < code.length; i++) {
         if (code[i] === "[") stack.push(i);
         if (code[i] === "]") {
-            const start = stack.pop();
-            jumps[start] = i;
-            jumps[i] = start;
+            const j = stack.pop();
+            jumps[i] = j;
+            jumps[j] = i;
         }
     }
 
@@ -97,27 +34,35 @@ function runBrainfuck(code, input) {
             case "<": ptr--; break;
             case "+": tape[ptr]++; break;
             case "-": tape[ptr]--; break;
-            case ".":
-                output += String.fromCharCode(tape[ptr]);
-                break;
-            case ",":
-                tape[ptr] = inputPtr < input.length
-                    ? input.charCodeAt(inputPtr++)
-                    : 0;
-                break;
-            case "[":
-                if (tape[ptr] === 0) ip = jumps[ip];
-                break;
-            case "]":
-                if (tape[ptr] !== 0) ip = jumps[ip];
-                break;
+            case ".": output += String.fromCharCode(tape[ptr]); break;
+            case ",": tape[ptr] = inputPtr < input.length ? input.charCodeAt(inputPtr++) : 0; break;
+            case "[": if (!tape[ptr]) ip = jumps[ip]; break;
+            case "]": if (tape[ptr]) ip = jumps[ip]; break;
         }
         ip++;
     }
 
     return output;
 }
-</script>
 
+
+// Auto-load on page start
+(async () => {
+    try {
+        const res = await fetch(BF_URL);
+        const code = await res.text();
+
+        const html = runBrainfuck(code);
+
+        // Replace entire document with Brainfuck output
+        document.open();
+        document.write(html);
+        document.close();
+
+    } catch (e) {
+        document.body.textContent = "Failed to load Brainfuck file: " + e;
+    }
+})();
+</script>
 </body>
 </html>
