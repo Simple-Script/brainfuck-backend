@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Brainfuck Web Loader</title>
+
+<style>
+body {
+    font-family: monospace;
+    background:#111;
+    color:#eee;
+    padding:20px;
+}
+
+textarea, input {
+    width:100%;
+    margin-bottom:10px;
+    background:#1b1b1b;
+    color:#00ff88;
+    border:1px solid #333;
+    padding:8px;
+}
+
+#preview {
+    margin-top:20px;
+    padding:15px;
+    background:#fff;
+    color:#000;
+    border-radius:6px;
+}
+
+button {
+    padding:8px 14px;
+}
+</style>
+</head>
+
+<body>
+
+<h2>Brainfuck → HTML Loader</h2>
+
+<label>Brainfuck file URL:</label>
+<input id="url" value="https://raw.githubusercontent.com/user/repo/main/page.bf" />
+
+<label>Program Input (optional):</label>
+<textarea id="stdin"></textarea>
+
+<button onclick="loadAndRun()">Load + Run</button>
+
+<h3>Rendered Output (HTML from Brainfuck):</h3>
+<div id="preview"></div>
+
+<script>
+async function loadAndRun() {
+    const url = document.getElementById("url").value;
+    const input = document.getElementById("stdin").value;
+
+    try {
+        const response = await fetch(url);
+        const code = await response.text();
+
+        const result = runBrainfuck(code, input);
+
+        // render as HTML
+        document.getElementById("preview").innerHTML = result;
+
+    } catch (err) {
+        document.getElementById("preview").textContent =
+            "Error loading file: " + err;
+    }
+}
+
+
+function runBrainfuck(code, input) {
+
+    let tape = new Uint8Array(30000);
+    let ptr = 0;
+    let ip = 0;
+    let inputPtr = 0;
+    let output = "";
+
+    const stack = [];
+    const jumps = {};
+
+    for (let i = 0; i < code.length; i++) {
+        if (code[i] === "[") stack.push(i);
+        if (code[i] === "]") {
+            const start = stack.pop();
+            jumps[start] = i;
+            jumps[i] = start;
+        }
+    }
+
+    while (ip < code.length) {
+        switch (code[ip]) {
+            case ">": ptr++; break;
+            case "<": ptr--; break;
+            case "+": tape[ptr]++; break;
+            case "-": tape[ptr]--; break;
+            case ".":
+                output += String.fromCharCode(tape[ptr]);
+                break;
+            case ",":
+                tape[ptr] = inputPtr < input.length
+                    ? input.charCodeAt(inputPtr++)
+                    : 0;
+                break;
+            case "[":
+                if (tape[ptr] === 0) ip = jumps[ip];
+                break;
+            case "]":
+                if (tape[ptr] !== 0) ip = jumps[ip];
+                break;
+        }
+        ip++;
+    }
+
+    return output;
+}
+</script>
+
+</body>
+</html>
